@@ -1,3 +1,5 @@
+FROM python:3.7-slim
+
 WORKDIR /backend/backend
 
 COPY requirements.txt backend/backend/
