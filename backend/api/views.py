@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
+from enum import Enum
 
 from api.filters import AuthorAndTagFilter, IngredientSearchFilter
 from api.models import (Cart, Favorite, Ingredient, IngredientAmount, Recipe,
@@ -16,6 +17,34 @@ from api.pagination import LimitPageNumberPagination
 from api.permissions import IsAdminOrReadOnly, IsOwnerOrReadOnly
 from api.serializers import (CropRecipeSerializer, IngredientSerializer,
                              RecipeSerializer, TagSerializer)
+
+
+class Tuples(tuple, Enum):
+    # Размер сохраняемого изображения рецепта
+    RECIPE_IMAGE_SIZE = 500, 300
+    # Поиск объектов только с переданным параметром.
+    # Например только в избранном: `is_favorited=1`
+    SYMBOL_TRUE_SEARCH = '1', 'true'
+    # Поиск объектов не содержащих переданный параметр.
+    # Например только не избранное: `is_favorited=0`
+    SYMBOL_FALSE_SEARCH = '0', 'false'
+    ADD_METHODS = 'GET', 'POST'
+    DEL_METHODS = 'DELETE',
+    ACTION_METHODS = 'GET', 'POST', 'DELETE'
+    UPDATE_METHODS = 'PUT', 'PATCH'
+
+
+class UrlQueries(str, Enum):
+    # Параметр для поиска ингридиентов по вхождению значения в название
+    SEARCH_ING_NAME = 'name'
+    # Параметр для поиска объектов в списке "избранное"
+    FAVORITE = 'is_favorited'
+    # Параметр для поиска объектов в списке "покупки"
+    SHOP_CART = 'is_in_shopping_cart'
+    # Параметр для поиска объектов по автору
+    AUTHOR = 'author'
+    # Параметр для поиска объектов по тэгам
+    TAGS = 'tags'
 
 
 class TagsViewSet(ReadOnlyModelViewSet):
@@ -39,22 +68,58 @@ class RecipeViewSet(viewsets.ModelViewSet):
     filter_class = AuthorAndTagFilter
     permission_classes = [IsOwnerOrReadOnly]
 
+    def get_queryset(self):
+        """Получает queryset в соответствии с параметрами запроса.
+
+        Returns:
+            QuerySet[Recipe]: Список запрошенных объектов.
+        """
+        queryset = self.queryset
+
+        tags: list = self.request.query_params.getlist(UrlQueries.TAGS.value)
+        if tags:
+            queryset = queryset.filter(
+                tags__slug__in=tags).distinct()
+        """
+        author: str = self.request.query_params.get(UrlQueries.AUTHOR.value)
+        if author:
+            queryset = queryset.filter(author=author)
+
+        # Следующие фильтры только для авторизованного пользователя
+        if self.request.user.is_anonymous:
+            return queryset
+
+        is_in_cart: str = self.request.query_params.get(UrlQueries.SHOP_CART)
+        if is_in_cart in Tuples.SYMBOL_TRUE_SEARCH.value:
+            queryset = queryset.filter(in_carts__user=self.request.user)
+        elif is_in_cart in Tuples.SYMBOL_FALSE_SEARCH.value:
+            queryset = queryset.exclude(in_carts__user=self.request.user)
+
+        is_favorite: str = self.request.query_params.get(UrlQueries.FAVORITE)
+        if is_favorite in Tuples.SYMBOL_TRUE_SEARCH.value:
+            queryset = queryset.filter(in_favorites__user=self.request.user)
+        if is_favorite in Tuples.SYMBOL_FALSE_SEARCH.value:
+            queryset = queryset.exclude(in_favorites__user=self.request.user)
+        """
+        return queryset
+
+
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
-    @action(detail=True, methods=['get', 'delete'],
+    @action(detail=True, methods=['post', 'delete'],
             permission_classes=[IsAuthenticated])
     def favorite(self, request, pk=None):
-        if request.method == 'GET':
+        if request.method == 'POST':
             return self.add_obj(Favorite, request.user, pk)
         elif request.method == 'DELETE':
             return self.delete_obj(Favorite, request.user, pk)
         return None
 
-    @action(detail=True, methods=['get', 'delete'],
+    @action(detail=True, methods=['post', 'delete'],
             permission_classes=[IsAuthenticated])
     def shopping_cart(self, request, pk=None):
-        if request.method == 'GET':
+        if request.method == 'POST':
             return self.add_obj(Cart, request.user, pk)
         elif request.method == 'DELETE':
             return self.delete_obj(Cart, request.user, pk)

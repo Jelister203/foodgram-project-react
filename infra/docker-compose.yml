@@ -14,11 +14,13 @@ services:
       - ./.env
 
   backend:
-    image: jelister/foodgram-project
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
     restart: always
     volumes:
-      - static_value:/code/static/
-      - media_value:/code/media/
+      - static_value:/backend/backend/static/
+      - media_value:/backend/backend/media/
     depends_on:
       - db
     env_file:
@@ -42,6 +44,5 @@ services:
       - ../docs/openapi-schema.yml:/usr/share/nginx/html/api/docs/openapi-schema.yml
       - static_value:/var/html/static/
       - media_value:/var/html/media/
-      - db_value:/var/lib/postgresql/data/
     depends_on:
       - backend
