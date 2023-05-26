@@ -1,3 +1,5 @@
+from enum import Enum
+
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from reportlab.pdfbase import pdfmetrics
@@ -8,7 +10,6 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ReadOnlyModelViewSet
-from enum import Enum
 
 from api.filters import AuthorAndTagFilter, IngredientSearchFilter
 from api.models import (Cart, Favorite, Ingredient, IngredientAmount, Recipe,
@@ -80,29 +81,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         if tags:
             queryset = queryset.filter(
                 tags__slug__in=tags).distinct()
-        """
-        author: str = self.request.query_params.get(UrlQueries.AUTHOR.value)
-        if author:
-            queryset = queryset.filter(author=author)
-
-        # Следующие фильтры только для авторизованного пользователя
-        if self.request.user.is_anonymous:
-            return queryset
-
-        is_in_cart: str = self.request.query_params.get(UrlQueries.SHOP_CART)
-        if is_in_cart in Tuples.SYMBOL_TRUE_SEARCH.value:
-            queryset = queryset.filter(in_carts__user=self.request.user)
-        elif is_in_cart in Tuples.SYMBOL_FALSE_SEARCH.value:
-            queryset = queryset.exclude(in_carts__user=self.request.user)
-
-        is_favorite: str = self.request.query_params.get(UrlQueries.FAVORITE)
-        if is_favorite in Tuples.SYMBOL_TRUE_SEARCH.value:
-            queryset = queryset.filter(in_favorites__user=self.request.user)
-        if is_favorite in Tuples.SYMBOL_FALSE_SEARCH.value:
-            queryset = queryset.exclude(in_favorites__user=self.request.user)
-        """
         return queryset
-
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
