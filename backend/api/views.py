@@ -70,7 +70,8 @@ class RecipeViewSet(viewsets.ModelViewSet):
     permission_classes = [IsOwnerOrReadOnly]
 
     def get_queryset(self):
-        """Получает queryset в соответствии с параметрами запроса.
+        """
+        Получает queryset в соответствии с параметрами запроса.
 
         Returns:
             QuerySet[Recipe]: Список запрошенных объектов.
