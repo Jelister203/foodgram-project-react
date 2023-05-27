@@ -1,13 +1,12 @@
+from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
-from django.contrib.auth import get_user_model
 
 from api.models import Ingredient, IngredientAmount, Recipe, Tag
 from users.models import Follow
 from users.serializers import CustomUserSerializer
-
 
 User = get_user_model()
 
@@ -157,7 +156,6 @@ class FollowSerializer(serializers.ModelSerializer):
         if Follow.objects.filter(user=user, author=author).exists():
             raise serializers.ValidationError(
                 "Вы уже подписаны на данного пользователя")
-        follow = Follow.objects.create(user=user, author=author)
         return data
 
     def get_is_subscribed(self, obj):
