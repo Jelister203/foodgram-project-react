@@ -72,7 +72,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
             return self.add_obj(Cart, request.user, pk)
         return self.delete_obj(Cart, request.user, pk)
 
-    @action(detail=False, methods=['get'],
+    @action(detail=False, methods=['post'],
             permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
         final_ingredients = {}
