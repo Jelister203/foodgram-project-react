@@ -148,9 +148,9 @@ class FollowSerializer(serializers.ModelSerializer):
         fields = ('id', 'email', 'username', 'first_name', 'last_name',
                   'is_subscribed', 'recipes', 'recipes_count')
 
-    def create(self, validated_data):
+    def validate(self, data):
         user = self.context.get('user')
-        author = validated_data['author']
+        author = data['author']
         if user == author:
             raise serializers.ValidationError(
                 "Нельзя подписаться на самого себя")
@@ -158,7 +158,7 @@ class FollowSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "Вы уже подписаны на данного пользователя")
         follow = Follow.objects.create(user=user, author=author)
-        return follow
+        return data
 
     def get_is_subscribed(self, obj):
         return Follow.objects.filter(
