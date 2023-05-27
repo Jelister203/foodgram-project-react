@@ -1,12 +1,13 @@
-from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
+from django.contrib.auth import get_user_model
 
 from api.models import Ingredient, IngredientAmount, Recipe, Tag
 from users.models import Follow
 from users.serializers import CustomUserSerializer
+
 
 User = get_user_model()
 
@@ -146,15 +147,9 @@ class FollowSerializer(serializers.ModelSerializer):
         model = Follow
         fields = ('id', 'email', 'username', 'first_name', 'last_name',
                   'is_subscribed', 'recipes', 'recipes_count')
-        validators = [
-            UniqueTogetherValidator(
-                queryset=User.objects.all(),
-                fileds=['user', 'author']
-            )
-        ]
 
     def create(self, validated_data):
-        user = validated_data['user']
+        user = self.context.get('user')
         author = validated_data['author']
         if Follow.objects.filter(user=user, author=author).exists():
             raise serializers.ValidationError(
