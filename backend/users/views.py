@@ -16,7 +16,7 @@ User = get_user_model()
 class CustomUserViewSet(UserViewSet):
     pagination_class = LimitPageNumberPagination
 
-    @action(detail=True, permission_classes=[IsAuthenticated])
+    @action(detail=True, permission_classes=[IsAuthenticated], methods=['post'])
     def subscribe(self, request, id=None):
         user = request.user
         author = get_object_or_404(User, id=id)
@@ -27,7 +27,7 @@ class CustomUserViewSet(UserViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
-    def del_subscribe(self, request, id=None):
+    def del_subscribe(self, request, id=None, methods=['delete']):
         user = request.user
         author = get_object_or_404(User, id=id)
         follow = Follow.objects.filter(user=user, author=author)
