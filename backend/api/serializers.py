@@ -149,7 +149,7 @@ class FollowSerializer(serializers.ModelSerializer):
                   'is_subscribed', 'recipes', 'recipes_count')
 
     def validate(self, data):
-        user = self.context.get('user')
+        user = self.initial_data.get('user')
         author = data['author']
         if user == author:
             raise serializers.ValidationError(
