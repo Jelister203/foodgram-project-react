@@ -1,3 +1,4 @@
+from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
@@ -6,6 +7,8 @@ from rest_framework.validators import UniqueTogetherValidator
 from api.models import Ingredient, IngredientAmount, Recipe, Tag
 from users.models import Follow
 from users.serializers import CustomUserSerializer
+
+User = get_user_model()
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -72,13 +75,13 @@ class RecipeSerializer(serializers.ModelSerializer):
         ingredients = self.initial_data.get('ingredients')
         if not ingredients:
             raise serializers.ValidationError({
-                'ingredients': 'Нужен хоть один ингридиент для рецепта'})
+                'ingredients': 'Нужен хоть один ингредиент для рецепта'})
         ingredient_list = []
         for ingredient_item in ingredients:
             ingredient = get_object_or_404(Ingredient,
                                            id=ingredient_item['id'])
             if ingredient in ingredient_list:
-                raise serializers.ValidationError('Ингридиенты должны '
+                raise serializers.ValidationError('Ингредиенты должны '
                                                   'быть уникальными')
             ingredient_list.append(ingredient)
             if int(ingredient_item['amount']) < 0:
@@ -90,12 +93,12 @@ class RecipeSerializer(serializers.ModelSerializer):
         return data
 
     def create_ingredients(self, ingredients, recipe):
-        for ingredient in ingredients:
-            IngredientAmount.objects.create(
+        objs = [IngredientAmount(
                 recipe=recipe,
                 ingredient_id=ingredient.get('id'),
                 amount=ingredient.get('amount'),
-            )
+                ) for ingredient in ingredients]
+        IngredientAmount.objects.bulk_create(objs, len(objs))
 
     def create(self, validated_data):
         image = validated_data.pop('image')
@@ -107,19 +110,17 @@ class RecipeSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, instance, validated_data):
-        instance.image = validated_data.get('image', instance.image)
-        instance.name = validated_data.get('name', instance.name)
-        instance.text = validated_data.get('text', instance.text)
-        instance.cooking_time = validated_data.get(
+        ret = super().update(instance)
+        ret.cooking_time = validated_data.get(
             'cooking_time', instance.cooking_time
         )
-        instance.tags.clear()
+        ret.tags.clear()
         tags_data = self.initial_data.get('tags')
-        instance.tags.set(tags_data)
+        ret.tags.set(tags_data)
         IngredientAmount.objects.filter(recipe=instance).all().delete()
         self.create_ingredients(validated_data.get('ingredients'), instance)
-        instance.save()
-        return instance
+        ret.save()
+        return ret
 
 
 class CropRecipeSerializer(serializers.ModelSerializer):
@@ -145,6 +146,17 @@ class FollowSerializer(serializers.ModelSerializer):
         model = Follow
         fields = ('id', 'email', 'username', 'first_name', 'last_name',
                   'is_subscribed', 'recipes', 'recipes_count')
+
+    def validate(self, data):
+        user = self.initial_data.get('user')
+        author = data['author']
+        if user == author:
+            raise serializers.ValidationError(
+                "Нельзя подписаться на самого себя")
+        if Follow.objects.filter(user=user, author=author).exists():
+            raise serializers.ValidationError(
+                "Вы уже подписаны на данного пользователя")
+        return data
 
     def get_is_subscribed(self, obj):
         return Follow.objects.filter(
