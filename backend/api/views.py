@@ -1,3 +1,4 @@
+from django.db.models import Sum
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from reportlab.pdfbase import pdfmetrics
@@ -77,18 +78,18 @@ class RecipeViewSet(viewsets.ModelViewSet):
     def download_shopping_cart(self, request):
         final_ingredients = {}
         ingredients = IngredientAmount.objects.filter(
-            recipe__cart__user=request.user).values_list(
-            'ingredient__name', 'ingredient__measurement_unit',
-            'amount')
+            recipe__cart__user=request.user).values(
+            'ingredient__name', 'ingredient__measurement_unit').annotate(
+            amount=Sum('amount'))
         for item in ingredients:
-            name = item[0]
+            name = item['ingredient__name']
             if name not in final_ingredients:
                 final_ingredients[name] = {
-                    'measurement_unit': item[1],
-                    'amount': item[2]
+                    'measurement_unit': item['ingredient__measurement_unit'],
+                    'amount': item['amount']
                 }
             else:
-                final_ingredients[name]['amount'] += item[2]
+                final_ingredients[name]['amount'] += item['amount']
         pdfmetrics.registerFont(
             TTFont('Slimamif', 'Slimamif.ttf', 'UTF-8'))
         response = HttpResponse(content_type='application/pdf')

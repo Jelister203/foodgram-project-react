@@ -1,4 +1,3 @@
-from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
@@ -7,8 +6,6 @@ from rest_framework.validators import UniqueTogetherValidator
 from api.models import Ingredient, IngredientAmount, Recipe, Tag
 from users.models import Follow
 from users.serializers import CustomUserSerializer
-
-User = get_user_model()
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -73,6 +70,7 @@ class RecipeSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         ingredients = self.initial_data.get('ingredients')
+        # Я не знаю, как это исправить ;(
         if not ingredients:
             raise serializers.ValidationError({
                 'ingredients': 'Нужен хоть один ингредиент для рецепта'})
@@ -93,11 +91,12 @@ class RecipeSerializer(serializers.ModelSerializer):
         return data
 
     def create_ingredients(self, ingredients, recipe):
-        objs = [IngredientAmount(
+        objs = [
+            IngredientAmount(
                 recipe=recipe,
                 ingredient_id=ingredient.get('id'),
-                amount=ingredient.get('amount'),
-                ) for ingredient in ingredients]
+                amount=ingredient.get('amount')) for ingredient in ingredients
+        ]
         IngredientAmount.objects.bulk_create(objs, len(objs))
 
     def create(self, validated_data):
@@ -110,17 +109,20 @@ class RecipeSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, instance, validated_data):
-        ret = super().update(instance)
-        ret.cooking_time = validated_data.get(
+        # ret = super().update(instance, validated_data)  - не работает!
+        instance.image = validated_data.get('image', instance.image)
+        instance.name = validated_data.get('name', instance.name)
+        instance.text = validated_data.get('text', instance.text)
+        instance.cooking_time = validated_data.get(
             'cooking_time', instance.cooking_time
         )
-        ret.tags.clear()
+        instance.tags.clear()
         tags_data = self.initial_data.get('tags')
-        ret.tags.set(tags_data)
+        instance.tags.set(tags_data)
         IngredientAmount.objects.filter(recipe=instance).all().delete()
         self.create_ingredients(validated_data.get('ingredients'), instance)
-        ret.save()
-        return ret
+        instance.save()
+        return instance
 
 
 class CropRecipeSerializer(serializers.ModelSerializer):

@@ -14,9 +14,7 @@ services:
       - ./.env
 
   backend:
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
+    image: jelister/foodgram-project:latest
     restart: always
     volumes:
       - static_value:/backend/backend/static/

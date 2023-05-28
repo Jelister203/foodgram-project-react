@@ -24,7 +24,8 @@ class CustomUserViewSet(UserViewSet):
         user = request.user
         author = get_object_or_404(User, id=id)
         follow = Follow.objects.create(user=user, author=author)
-        serializer = FollowSerializer(
+        # С этим тоже ничего не получается ((
+        serializer = FollowSerializer(  # простите (
             follow, context={'request': request}
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
