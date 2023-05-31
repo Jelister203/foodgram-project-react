@@ -38,23 +38,54 @@ class IngredientAmountSerializer(serializers.ModelSerializer):
         ]
 
 
-class RecipeSerializer(serializers.ModelSerializer):
-    image = Base64ImageField()
-    tags = TagSerializer(read_only=True, many=True)
-    author = CustomUserSerializer(read_only=True)
-    ingredients = IngredientAmountSerializer(
-        source='ingredientamount_set',
-        many=True,
-        read_only=True,
-    )
-    is_favorited = serializers.SerializerMethodField()
-    is_in_shopping_cart = serializers.SerializerMethodField()
+class RecipeSerializer(serializers.BaseSerializer):
+    def to_internal_value(self, data):
+        id = data.get('id')
 
-    class Meta:
-        model = Recipe
-        fields = ('id', 'tags', 'author', 'ingredients', 'is_favorited',
-                  'is_in_shopping_cart', 'name', 'image', 'text',
-                  'cooking_time')
+        obj = Recipe.objects.get(id=id)
+
+        tags = data.get('tags')
+        ingredients = data.get('ingredients')
+        is_favorited = self.get_is_favorited(obj)
+        is_in_shopping_cart = self.get_is_in_shopping_cart(obj)
+        name = data.get('name')
+        image = data.get('image')
+        text = data.get('text')
+        cooking_time = data.get('cooking_time')
+
+        response = {
+            'id': id,
+            'tags': tags,
+            'ingredients': ingredients,
+            'is_favorited': is_favorited,
+            'is_in_shopping_cart': is_in_shopping_cart,
+            'name': name,
+            'text': text,
+            'cooking_time': cooking_time
+        }
+        if image is not None:
+            response['image'] = (Base64ImageField(
+                data.get('image')).to_internal_value(data.get('image')))
+        return response
+
+    def to_representation(self, instance):
+        return {
+            'id': instance.id,
+            'tags': TagSerializer(instance.tags.filter(), many=True).data,
+            'author': CustomUserSerializer(
+                instance.author,
+                context={'request': self.context.get('request')}).data,
+            'ingredients': IngredientAmountSerializer(
+                IngredientAmount.objects.filter(
+                    recipe=instance), many=True).data,
+            'is_favorited': self.get_is_favorited(instance),
+            'is_in_shopping_cart': self.get_is_in_shopping_cart(instance),
+            'name': instance.name,
+            'image': Base64ImageField(
+                instance.image).to_representation(instance.image),
+            'text': instance.text,
+            'cooking_time': instance.cooking_time
+        }
 
     def get_is_favorited(self, obj):
         user = self.context.get('request').user
@@ -69,8 +100,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         return Recipe.objects.filter(cart__user=user, id=obj.id).exists()
 
     def validate(self, data):
-        ingredients = self.initial_data.get('ingredients')
-        # Я не знаю, как это исправить ;(
+        ingredients = data.get('ingredients')
         if not ingredients:
             raise serializers.ValidationError({
                 'ingredients': 'Нужен хоть один ингредиент для рецепта'})
@@ -84,8 +114,10 @@ class RecipeSerializer(serializers.ModelSerializer):
             ingredient_list.append(ingredient)
             if int(ingredient_item['amount']) < 0:
                 raise serializers.ValidationError({
-                    'ingredients': ('Убедитесь, что значение количества '
-                                    'ингредиента больше 0')
+                    'ingredients': (
+                        'Убедитесь, что значение количества '
+                        'ингредиента больше 0'
+                    )
                 })
         data['ingredients'] = ingredients
         return data
@@ -109,7 +141,10 @@ class RecipeSerializer(serializers.ModelSerializer):
         return recipe
 
     def update(self, instance, validated_data):
-        # ret = super().update(instance, validated_data)  - не работает!
+        # ret = super().update(instance, validated_data)
+        # вызывает NotImplementedError
+        # поскольку в BaseSerializer данный метод описан как экземпляр
+        # или что-то в этом духе.
         instance.image = validated_data.get('image', instance.image)
         instance.name = validated_data.get('name', instance.name)
         instance.text = validated_data.get('text', instance.text)
@@ -149,9 +184,15 @@ class FollowSerializer(serializers.ModelSerializer):
         fields = ('id', 'email', 'username', 'first_name', 'last_name',
                   'is_subscribed', 'recipes', 'recipes_count')
 
+    def create(self, validated_data):
+        user = self.initial_data.get('user')
+        author = validated_data.get('id')
+        follow = Follow.objects.create(user=user, author=author)
+        return follow
+
     def validate(self, data):
         user = self.initial_data.get('user')
-        author = data['author']
+        author = data.get('author')
         if user == author:
             raise serializers.ValidationError(
                 "Нельзя подписаться на самого себя")

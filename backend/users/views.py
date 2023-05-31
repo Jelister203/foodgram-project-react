@@ -21,13 +21,16 @@ class CustomUserViewSet(UserViewSet):
         permission_classes=[IsAuthenticated],
         methods=['post'])
     def subscribe(self, request, id=None):
-        user = request.user
-        author = get_object_or_404(User, id=id)
-        follow = Follow.objects.create(user=user, author=author)
-        # С этим тоже ничего не получается ((
-        serializer = FollowSerializer(  # простите (
-            follow, context={'request': request}
+        user = User.objects.get(id=request.user.id)
+        author = User.objects.get(id=id)
+        follow = Follow(user=user, author=author)
+        serializer = FollowSerializer(
+            follow,
+            data={'user': user, 'author': author},
+            context={'request': request}
         )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     @subscribe.mapping.delete
