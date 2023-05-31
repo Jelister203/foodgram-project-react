@@ -62,7 +62,6 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
           script: |
-            sudo docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram_frontend
             sudo docker pull ${{ secrets.DOCKER_USERNAME }}/foodgram-project
             sudo systemctl stop nginx 
             sudo docker compose stop
@@ -91,4 +90,4 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
-          message: ${{ github.workflow }} успешно выполнен!
+          message: ${{ github.workflow }} успешно выполнен! Можно пойти и выпить пива!
