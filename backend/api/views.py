@@ -49,7 +49,6 @@ class RecipeViewSet(viewsets.ModelViewSet):
             QuerySet[Recipe]: Список запрошенных объектов.
         """
         queryset = self.queryset
-
         tags: list = self.request.query_params.getlist(UrlQueries.TAGS.value)
         if tags:
             queryset = queryset.filter(
@@ -57,6 +56,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
+        serializer.is_valid()
         serializer.save(author=self.request.user)
 
     @action(detail=True, methods=['post', 'delete'],
@@ -76,20 +76,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'],
             permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
-        final_ingredients = {}
-        ingredients = IngredientAmount.objects.filter(
-            recipe__cart__user=request.user).values(
-            'ingredient__name', 'ingredient__measurement_unit').annotate(
-            amount=Sum('amount'))
-        for item in ingredients:
-            name = item['ingredient__name']
-            if name not in final_ingredients:
-                final_ingredients[name] = {
-                    'measurement_unit': item['ingredient__measurement_unit'],
-                    'amount': item['amount']
-                }
-            else:
-                final_ingredients[name]['amount'] += item['amount']
+        final_ingredients = IngredientAmount.objects.filter(
+            recipe__cart__user=request.user).annotate(
+            am=Sum('amount')).values(
+            'ingredient__name', 'ingredient__measurement_unit', 'am')
+        # Я исправил этот момент, однако
+        # теперь ингредиенты меж рецептов не складываются!
         pdfmetrics.registerFont(
             TTFont('Slimamif', 'Slimamif.ttf', 'UTF-8'))
         response = HttpResponse(content_type='application/pdf')
@@ -100,9 +92,12 @@ class RecipeViewSet(viewsets.ModelViewSet):
         page.drawString(200, 800, 'Список ингредиентов')
         page.setFont('Slimamif', size=16)
         height = 750
-        for i, (name, data) in enumerate(final_ingredients.items(), 1):
-            page.drawString(75, height, (f'<{i}> {name} - {data["amount"]}, '
-                                         f'{data["measurement_unit"]}'))
+        for i, data in enumerate(final_ingredients, 1):
+            page.drawString(
+                75, height, (f'<{i}> {data.get("ingredient__name")}'
+                             + f' - {data.get("am")}, '
+                             + f'{data.get("ingredient__measurement_unit")}')
+            )
             height -= 25
         page.showPage()
         page.save()
