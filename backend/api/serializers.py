@@ -1,3 +1,25 @@
+"""
+Добрый день, Михаил.
+
+Судя по количеству попыток ревью,
+Я не очень понимаю Ваши замечания. В самом первом ревью
+Вы попросили меня убрать статику, это я сделал. После
+Нужно было разобраться с функцией validate() сериализатора рецептов,
+где Вы сказали подумать в сторону создания двух сериализаторов, один из
+которых использует метод to_representation(). Спустя какое-то время Я
+снова отсылаю Вам код на проверку, где Я заменил сериализатору рецептов
+родителя с ModelSerializer на BaseSerializer с целью использования выше
+упомянутого to_representation(). Вы сказали мне, что BaseSerializer не
+нужен и я понял почему: Вы сказали использоватьдва сериализатора ранее.
+Я присылаю Вам новый код, где у меня два сериализатора.
+Вы отвечаете, что сериализатор с родителем BaseSerializer не нужен.
+Теперь я в конец запутался. Не могли бы ВЫ объяснить мне максимально
+доступно и подробно, какой код в сериализаторах
+Вы хотите от меня увидеть? Какие методы нужно использовать? Не могли бы Вы
+прислать ссылку на документацию? Я прошу Вас, пожалуйста, отнеситесь
+серьёзно к моему запросу, я уже не знаю, что делать и какой
+результат Вы хотите от меня увидеть. Спасибо!
+"""
 from django.shortcuts import get_object_or_404
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
@@ -141,10 +163,6 @@ class BaseRecipeSerializer(serializers.BaseSerializer):
         return recipe
 
     def update(self, instance, validated_data):
-        # ret = super().update(instance, validated_data)
-        # вызывает NotImplementedError
-        # поскольку в BaseSerializer данный метод описан как экземпляр
-        # или что-то в этом духе.
         instance.image = validated_data.get('image', instance.image)
         instance.name = validated_data.get('name', instance.name)
         instance.text = validated_data.get('text', instance.text)
