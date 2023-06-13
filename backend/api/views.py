@@ -77,11 +77,9 @@ class RecipeViewSet(viewsets.ModelViewSet):
             permission_classes=[IsAuthenticated])
     def download_shopping_cart(self, request):
         final_ingredients = IngredientAmount.objects.filter(
-            recipe__cart__user=request.user).annotate(
-            am=Sum('amount')).values(
-            'ingredient__name', 'ingredient__measurement_unit', 'am')
-        # Я исправил этот момент, однако
-        # теперь ингредиенты меж рецептов не складываются!
+            recipe__cart__user=request.user).values(
+            'ingredient__name', 'ingredient__measurement_unit').annotate(
+            am=Sum('amount'))
         pdfmetrics.registerFont(
             TTFont('Slimamif', 'Slimamif.ttf', 'UTF-8'))
         response = HttpResponse(content_type='application/pdf')

@@ -1,25 +1,3 @@
-"""
-Добрый день, Михаил.
-
-Судя по количеству попыток ревью,
-Я не очень понимаю Ваши замечания. В самом первом ревью
-Вы попросили меня убрать статику, это я сделал. После
-Нужно было разобраться с функцией validate() сериализатора рецептов,
-где Вы сказали подумать в сторону создания двух сериализаторов, один из
-которых использует метод to_representation(). Спустя какое-то время Я
-снова отсылаю Вам код на проверку, где Я заменил сериализатору рецептов
-родителя с ModelSerializer на BaseSerializer с целью использования выше
-упомянутого to_representation(). Вы сказали мне, что BaseSerializer не
-нужен и я понял почему: Вы сказали использоватьдва сериализатора ранее.
-Я присылаю Вам новый код, где у меня два сериализатора.
-Вы отвечаете, что сериализатор с родителем BaseSerializer не нужен.
-Теперь я в конец запутался. Не могли бы ВЫ объяснить мне максимально
-доступно и подробно, какой код в сериализаторах
-Вы хотите от меня увидеть? Какие методы нужно использовать? Не могли бы Вы
-прислать ссылку на документацию? Я прошу Вас, пожалуйста, отнеситесь
-серьёзно к моему запросу, я уже не знаю, что делать и какой
-результат Вы хотите от меня увидеть. Спасибо!
-"""
 from django.shortcuts import get_object_or_404
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
@@ -62,25 +40,21 @@ class IngredientAmountSerializer(serializers.ModelSerializer):
 
 class BaseRecipeSerializer(serializers.BaseSerializer):
     def to_internal_value(self, data):
-        id = data.get('id')
-
-        obj = Recipe.objects.get(id=id)
 
         tags = data.get('tags')
         ingredients = data.get('ingredients')
-        is_favorited = self.get_is_favorited(obj)
-        is_in_shopping_cart = self.get_is_in_shopping_cart(obj)
+        #is_favorited = self.get_is_favorited(obj)
+        #is_in_shopping_cart = self.get_is_in_shopping_cart(obj)
         name = data.get('name')
         image = data.get('image')
         text = data.get('text')
         cooking_time = data.get('cooking_time')
 
         response = {
-            'id': id,
             'tags': tags,
             'ingredients': ingredients,
-            'is_favorited': is_favorited,
-            'is_in_shopping_cart': is_in_shopping_cart,
+            #'is_favorited': is_favorited,
+            #'is_in_shopping_cart': is_in_shopping_cart,
             'name': name,
             'text': text,
             'cooking_time': cooking_time
@@ -156,8 +130,8 @@ class BaseRecipeSerializer(serializers.BaseSerializer):
     def create(self, validated_data):
         image = validated_data.pop('image')
         ingredients_data = validated_data.pop('ingredients')
+        tags_data = validated_data.pop('tags')
         recipe = Recipe.objects.create(image=image, **validated_data)
-        tags_data = self.initial_data.get('tags')
         recipe.tags.set(tags_data)
         self.create_ingredients(ingredients_data, recipe)
         return recipe
@@ -243,8 +217,8 @@ class RecipeSerializer(BaseRecipeSerializer):
     def create(self, validated_data):
         image = validated_data.pop('image')
         ingredients_data = validated_data.pop('ingredients')
+        tags_data = validated_data.pop('tags')
         recipe = Recipe.objects.create(image=image, **validated_data)
-        tags_data = self.initial_data.get('tags')
         recipe.tags.set(tags_data)
         self.create_ingredients(ingredients_data, recipe)
         return recipe
