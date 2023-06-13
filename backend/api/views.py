@@ -79,7 +79,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         final_ingredients = IngredientAmount.objects.filter(
             recipe__cart__user=request.user).values(
             'ingredient__name', 'ingredient__measurement_unit').annotate(
-            am=Sum('amount'))
+            total=Sum('amount')).order_by('total')
         pdfmetrics.registerFont(
             TTFont('Slimamif', 'Slimamif.ttf', 'UTF-8'))
         response = HttpResponse(content_type='application/pdf')
@@ -93,7 +93,7 @@ class RecipeViewSet(viewsets.ModelViewSet):
         for i, data in enumerate(final_ingredients, 1):
             page.drawString(
                 75, height, (f'<{i}> {data.get("ingredient__name")}'
-                             + f' - {data.get("am")}, '
+                             + f' - {data.get("total")}, '
                              + f'{data.get("ingredient__measurement_unit")}')
             )
             height -= 25
