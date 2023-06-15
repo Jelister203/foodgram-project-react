@@ -1,4 +1,3 @@
-from django.shortcuts import get_object_or_404
 from drf_extra_fields.fields import Base64ImageField
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
@@ -79,7 +78,7 @@ class RecipeSerializer(serializers.ModelSerializer):
         ingredient_list = []
         for ingredient in ingredients:
             ingredient_list.append(ingredient)
-            if int(ingredient_item['amount']) < 0:
+            if int(ingredient['amount']) < 0:
                 raise serializers.ValidationError({
                     'ingredients': (
                         'Убедитесь, что значение количества '
